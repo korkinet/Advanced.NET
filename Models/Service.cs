@@ -1,6 +1,6 @@
-﻿namespace RunApp
+﻿namespace Models
 {
-    internal class Service : IService
+    public class Service : IService
     {
         public int SomeIntValue { get; set; }
         public string SomeStringValue { get; set; }

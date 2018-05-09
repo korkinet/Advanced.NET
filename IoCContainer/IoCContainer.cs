@@ -7,13 +7,15 @@ namespace IoCContainer
 {
     public class IoCContainer
     {
-        private Dictionary<Type, (Type type, LifeTime lifeTime)> Resolvers;
-        private Dictionary<Type, dynamic> instances;
-
-        public IoCContainer(Dictionary<Type, (Type type, LifeTime lifeTime)> resolvers)
+        private Dictionary<Type, ResolveData> Resolvers;
+        delegate dynamic dele(Type t);
+        public IoCContainer(Dictionary<Type, (Type[] types, LifeTime lifeTime, bool isSingle)> resolvers)
         {
-            Resolvers = resolvers ?? new Dictionary<Type, (Type, LifeTime)>();
-            instances = new Dictionary<Type, dynamic>();
+            Resolvers = resolvers != null ?
+                resolvers.ToDictionary(r => r.Key, r => new ResolveData(r.Value.types, r.Value.lifeTime, r.Value.isSingle)) :
+                new Dictionary<Type, ResolveData>();
+
+            Func<dynamic> x = Resolve<dynamic>;
         }
 
         public T Resolve<T>()
@@ -21,11 +23,19 @@ namespace IoCContainer
             if (Resolvers.ContainsKey(typeof(T)))
             {
                 var typeData = Resolvers[typeof(T)];
-                switch (typeData.lifeTime)
+                switch (typeData.LifeTime)
                 {
                     case LifeTime.Default:
-                        return ResolveInstance<T>(typeData.type);
+                        var instances = typeData.Instances.Select(i => ResolveInstance<T>(i.Key)).ToArray();
+                        if (typeData.IsSingle)
+                            return instances[0];
+                        else
+                            return instances;
                     case LifeTime.Singleton:
+                        foreach (var key in typeData.Instances.Keys) {
+                            typeData.Instances[key] = typeData.Instances[key] ?? ResolveInstance<T>(key);
+                        }
+                        var instances = typeData.Instances.Select(i => i.Value ?? ResolveInstance<T>(i.Key)).ToArray();
                         if (instances.ContainsKey(typeof(T))) {
                             return (T)instances[typeof(T)];
                         }

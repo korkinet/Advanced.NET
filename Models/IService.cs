@@ -1,6 +1,6 @@
-﻿namespace RunApp
+﻿namespace Models
 {
-    internal interface IService
+    public interface IService
     {
         int SomeIntValue { get; set; }
         string SomeStringValue { get; set; }
