@@ -2,28 +2,50 @@
 using System.Linq;
 using System.Collections.Generic;
 using static System.Activator;
+using System.Reflection;
+using System.IO;
 
 namespace IoCContainer
 {
     public class IoCContainer
     {
-        private Dictionary<Type, ResolveData> Resolvers;
-        delegate dynamic dele(Type t);
+        private Dictionary<Type, ResolveData> resolvers;
+
+        private List<AppDomain> appDomains = new List<AppDomain>();
+
+        private object ResolveInstance(Type type)
+        {
+
+            List<object> parameters = new List<object>();
+            var resolveMethod = this.GetType().GetMethod("Resolve");
+
+            var constructorInfo = type.GetConstructors().OrderBy(c => c.GetParameters().Length).FirstOrDefault();
+            if (constructorInfo != null)
+            {
+                foreach (var param in constructorInfo.GetParameters())
+                {
+                    var paramInstance = resolveMethod.MakeGenericMethod(param.GetType()).Invoke(this, null);
+                    parameters.Add(paramInstance);
+                }
+                return CreateInstance(type, parameters.ToArray(), null);
+            }
+
+            return CreateInstance(type, true);
+        }
+
         public IoCContainer(Dictionary<Type, (Type[] types, LifeTime lifeTime, bool isSingle)> resolvers)
         {
-            Resolvers = resolvers != null ?
-                resolvers.ToDictionary(r => r.Key, r => new ResolveData(r.Value.types, r.Value.lifeTime, r.Value.isSingle)) :
+            this.resolvers = resolvers != null ?
+                resolvers.ToDictionary((KeyValuePair<Type, (Type[] types, LifeTime lifeTime, bool isSingle)> r) => r.Key, (KeyValuePair<Type, (Type[] types, LifeTime lifeTime, bool isSingle)> r) => new ResolveData(r.Value.types, r.Value.lifeTime, r.Value.isSingle)) :
                 new Dictionary<Type, ResolveData>();
-
-            Func<dynamic> x = Resolve<dynamic>;
         }
 
         public T Resolve<T>()
         {
-            if (Resolvers.ContainsKey(typeof(T)))
+            if (resolvers.ContainsKey(typeof(T)))
             {
                 List<object> instances = new List<object>();
-                var typeData = Resolvers[typeof(T)];
+                var typeData = resolvers[typeof(T)];
                 switch (typeData.LifeTime)
                 {
                     case LifeTime.Default:
@@ -50,23 +72,31 @@ namespace IoCContainer
             return default(T);
         }
 
-        private object ResolveInstance(Type type)
+        public int LoadPlugins(string path)
         {
-            List<object> parameters = new List<object>();
-            var resolveMethod = this.GetType().GetMethod("Resolve");
+            AppDomain.MonitoringIsEnabled = true;
 
-            var constructorInfo = type.GetConstructors().OrderBy(c => c.GetParameters().Length).FirstOrDefault();
-            if (constructorInfo != null)
+            int plugins = 0;
+
+            foreach (var file in Directory.GetFiles(path, "*.dll"))
             {
-                foreach (var param in constructorInfo.GetParameters())
+                AppDomain appDomain = null;
+                var assembly = Assembly.ReflectionOnlyLoadFrom(file);
+
+                foreach (var type in assembly.GetTypes().Where(t => !t.IsInterface && t.GetInterfaces().Any(i => i.FullName == typeof(IPlugin).FullName)))
                 {
-                    var paramInstance = resolveMethod.MakeGenericMethod(param.GetType()).Invoke(this, null);
-                    parameters.Add(paramInstance);
+                    if (appDomain is null)
+                    {
+                        appDomain = AppDomain.CreateDomain(assembly.FullName);
+                        appDomains.Add(appDomain);
+                    }
+
+                    var instanceHandle = appDomain.CreateInstanceFrom(file, type.FullName);
+                    plugins++;
                 }
-                return CreateInstance(type, parameters.ToArray(), null);
             }
 
-            return CreateInstance(type, true);
+            return plugins;
         }
     }
 }

@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4E16BD18-381C-4A48-8AD7-B7C2B6CE3E4A}</ProjectGuid>
+    <ProjectGuid>{9FB9D8CF-D368-45D3-A8D4-BD9BC1165129}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>IoCContainer</RootNamespace>
-    <AssemblyName>IoCContainer</AssemblyName>
+    <RootNamespace>Plugins</RootNamespace>
+    <AssemblyName>Plugins</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -41,12 +40,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IoCBuilder.cs" />
-    <Compile Include="IoCContainer.cs" />
-    <Compile Include="IPlugin.cs" />
-    <Compile Include="LifeTime.cs" />
+    <Compile Include="FirstPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ResolveData.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IoCContainer\IoCContainer.csproj">
+      <Project>{4e16bd18-381c-4a48-8ad7-b7c2b6ce3e4a}</Project>
+      <Name>IoCContainer</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System.Reflection;
 
@@ -13,12 +12,7 @@ namespace IoCContainer
 
         private bool IsDerivedFrom(Type type, Type baseType)
         {
-            return type.BaseType != null && (type.BaseType.FullName == baseType.FullName || IsDerivedFrom(type.BaseType, baseType));
-        }
-
-        private void RegisterType(Type regType, Type[] resTypes, LifeTime lifeTime, bool isSingle)
-        {
-            resolvers[regType] = (resTypes, lifeTime, isSingle);
+            return type.BaseType != null && (type.BaseType == baseType || IsDerivedFrom(type.BaseType, baseType));
         }
 
         public void RegisterType<RegType, ResType>(LifeTime lifeTime) where ResType : class, RegType
@@ -26,25 +20,26 @@ namespace IoCContainer
             RegisterType(typeof(RegType), new[] { typeof(ResType) }, lifeTime, true);
         }
 
+        private void RegisterType(Type regType, Type[] resTypes, LifeTime lifeTime, bool isSingle)
+        {
+            resolvers[regType] = (resTypes, lifeTime, isSingle);
+        }
+
         public void RegisterByPath(string path, Type baseType)
         {
-            if (!Directory.Exists(path))
-            {
-                return;
-            }
-
-
             List<Type> types = new List<Type>();
-            foreach (var file in Directory.GetFiles(path, "*.dll"))
+            foreach (var file in new DirectoryInfo(path).GetFiles("*.dll"))
             {
                 try
                 {
-                    Assembly assembly = null;
-                    var reflectedAssembly = Assembly.ReflectionOnlyLoadFrom(file);
-                    foreach (var type in reflectedAssembly.GetTypes().Where(t => !t.IsInterface && (IsDerivedFrom(t, baseType) || t.GetInterfaces().Any(i => i.FullName == baseType.FullName))))
+                    var assembly = Assembly.ReflectionOnlyLoadFrom(file.FullName);
+                    foreach (var type in assembly.GetTypes())
                     {
-                        assembly = assembly ?? Assembly.LoadFrom(file);
-                        types.Add(assembly.GetType(type.FullName));
+                        if (IsDerivedFrom(type, baseType))
+                        {
+                            assembliesToLoad.Add(file.FullName);
+                            types.Add(type);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -52,12 +47,13 @@ namespace IoCContainer
                     System.Diagnostics.Debug.WriteLine($"Failed to load assembly, {ex.Message}");
                 }
             }
-
+            
             RegisterType(Array.CreateInstance(baseType, 0).GetType(), types.ToArray(), LifeTime.Default, false);
         }
 
         public IoCContainer Build()
         {
+            assembliesToLoad.ForEach(assembly => Assembly.LoadFrom(assembly));
             return new IoCContainer(resolvers);
         }
     }

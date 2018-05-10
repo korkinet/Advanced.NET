@@ -34,19 +34,5 @@ namespace Test
 
             Assert.AreEqual(obj1, obj2);
         }
-
-        [TestMethod]
-        public void LoadedByPath()
-        {
-            var builder = new IoCBuilder();
-            builder.RegisterByPath("..\\..\\..\\Models\\bin\\Debug", typeof(object));
-
-            var container = builder.Build();
-
-            var instances = container.Resolve<object[]>();
-
-            Assert.IsNotNull(instances);
-            Assert.AreEqual(instances.Length, 1);
-        }
     }
 }
