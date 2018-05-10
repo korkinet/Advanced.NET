@@ -57,6 +57,10 @@
       <Project>{5e54fb6e-b80b-49fe-aa1c-49c93e0603c3}</Project>
       <Name>Models</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Plugins\Plugins.csproj">
+      <Project>{9fb9d8cf-d368-45d3-a8d4-bd9bc1165129}</Project>
+      <Name>Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

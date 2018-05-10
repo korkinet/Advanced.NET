@@ -48,8 +48,8 @@ namespace RunApp
 
             try
             {
-                int pluginsCnt = container3.LoadPlugins(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Plugins\\bin\\Debug"));
-                Console.WriteLine($"{pluginsCnt} plugins loaded");
+                var plugins = container3.LoadPlugins(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Plugins\\bin\\Debug"));
+                Console.WriteLine($"{plugins.Length} plugins loaded");
             }
             catch (Exception ex)
             {

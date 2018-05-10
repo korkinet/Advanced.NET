@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using static System.Activator;
 using System.Reflection;
 using System.IO;
+using System.Diagnostics;
+using System.Timers;
 
 namespace IoCContainer
 {
@@ -72,11 +74,11 @@ namespace IoCContainer
             return default(T);
         }
 
-        public int LoadPlugins(string path)
+        public IPlugin[] LoadPlugins(string path)
         {
             AppDomain.MonitoringIsEnabled = true;
 
-            int plugins = 0;
+            List<IPlugin> instances = new List<IPlugin>();
 
             foreach (var file in Directory.GetFiles(path, "*.dll"))
             {
@@ -92,11 +94,50 @@ namespace IoCContainer
                     }
 
                     var instanceHandle = appDomain.CreateInstanceFrom(file, type.FullName);
-                    plugins++;
+
+                    instances.Add((IPlugin)instanceHandle.Unwrap());
                 }
             }
 
-            return plugins;
+            if (appDomains.Count > 0)
+            {
+                var timer = new System.Timers.Timer(1000);
+                timer.Elapsed += Monitoring;
+                timer.Start();
+            }
+
+            return instances.ToArray();
+        }
+
+        private void Monitoring(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            List<AppDomain> domainsToKill = new List<AppDomain>();
+            appDomains.ForEach(appDomain =>
+            {
+                Debug.WriteLine($"allocated memory: {appDomain.MonitoringTotalAllocatedMemorySize}, processor time: {appDomain.MonitoringTotalProcessorTime}");
+                if (appDomain.MonitoringTotalAllocatedMemorySize > 10000000 || appDomain.MonitoringTotalProcessorTime > TimeSpan.FromSeconds(1))
+                {
+                    domainsToKill.Add(appDomain);
+                    Debug.WriteLine($"App domain {appDomain.FriendlyName} will be unloaded");
+                }
+                else
+                {
+                    Debug.WriteLine($"App domain {appDomain.FriendlyName} run ok");
+                }
+            });
+
+            domainsToKill.ForEach(appDomain =>
+            {
+                appDomains.Remove(appDomain);
+                AppDomain.Unload(appDomain);
+            });
+
+            if (appDomains.Count == 0)
+            {
+                ((Timer)sender).Stop();
+                sender = null;
+                Debug.WriteLine($"All app domains were unloaded");
+            }
         }
     }
 }
