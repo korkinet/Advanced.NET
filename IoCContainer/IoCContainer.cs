@@ -22,32 +22,35 @@ namespace IoCContainer
         {
             if (Resolvers.ContainsKey(typeof(T)))
             {
+                List<object> instances = new List<object>();
                 var typeData = Resolvers[typeof(T)];
                 switch (typeData.LifeTime)
                 {
                     case LifeTime.Default:
-                        var instances = typeData.Instances.Select(i => ResolveInstance<T>(i.Key)).ToArray();
-                        if (typeData.IsSingle)
-                            return instances[0];
-                        else
-                            return instances;
+                        instances.AddRange(typeData.Instances.Select(i => ResolveInstance(i.Key)));
+                        break;
                     case LifeTime.Singleton:
-                        foreach (var key in typeData.Instances.Keys) {
-                            typeData.Instances[key] = typeData.Instances[key] ?? ResolveInstance<T>(key);
+                        foreach (var key in typeData.Instances.Keys.ToArray())
+                        {
+                            if (typeData.Instances[key] is null)
+                            {
+                                typeData.Instances[key] = ResolveInstance(key);
+                            }
                         }
-                        var instances = typeData.Instances.Select(i => i.Value ?? ResolveInstance<T>(i.Key)).ToArray();
-                        if (instances.ContainsKey(typeof(T))) {
-                            return (T)instances[typeof(T)];
-                        }
-                        var instance = ResolveInstance<T>(typeData.type);
-                        instances[typeof(T)] = instance;
-                        return instance;
+                        instances.AddRange(typeData.Instances.Select(i => i.Value ?? ResolveInstance(i.Key)));
+                        break;
                 }
+                if (typeof(T).IsArray)
+                {
+                    return (T)(object)instances.ToArray();
+                }
+
+                return (T)instances.FirstOrDefault();
             }
             return default(T);
         }
 
-        private T ResolveInstance<T>(Type type)
+        private object ResolveInstance(Type type)
         {
             List<object> parameters = new List<object>();
             var resolveMethod = this.GetType().GetMethod("Resolve");
@@ -60,10 +63,10 @@ namespace IoCContainer
                     var paramInstance = resolveMethod.MakeGenericMethod(param.GetType()).Invoke(this, null);
                     parameters.Add(paramInstance);
                 }
-                return (T)CreateInstance(type, parameters.ToArray(), null);
+                return CreateInstance(type, parameters.ToArray(), null);
             }
 
-            return (T)CreateInstance(type, true);
+            return CreateInstance(type, true);
         }
     }
 }

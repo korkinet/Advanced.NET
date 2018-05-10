@@ -47,7 +47,8 @@ namespace IoCContainer
                     System.Diagnostics.Debug.WriteLine($"Failed to load assembly, {ex.Message}");
                 }
             }
-            RegisterType(baseType, types.ToArray(), LifeTime.Default, false);
+            
+            RegisterType(Array.CreateInstance(baseType, 0).GetType(), types.ToArray(), LifeTime.Default, false);
         }
 
         public IoCContainer Build()
