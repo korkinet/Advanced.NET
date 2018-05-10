@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using IoCContainer;
 using Models;
 
@@ -30,6 +31,12 @@ namespace RunApp
 
             Console.WriteLine($"{nameof(obj1)} = {nameof(obj3)} : {obj1 == obj3}");
 
+
+            var builder3 = new IoCBuilder();
+            builder3.RegisterByPath($"{AppDomain.CurrentDomain.BaseDirectory}..\\..\\..\\..\\Models\\bin\\Debug\\netcoreapp2.0", typeof(object));
+            var container3 = builder3.Build();
+
+            var obj5 = container3.Resolve<object[]>();
 
             Console.ReadLine();
         }
